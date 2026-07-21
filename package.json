@@ -1,0 +1,32 @@
+{
+  "name": "goat-bot",
+  "version": "1.0.0",
+  "description": "GOAT — bot Discord (tickets, modération, niveaux, anti-raid, anti-liens, éditeur d'embed) en TypeScript / discord.js",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "dev:once": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "deploy": "tsx src/deploy-commands.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.9"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true
+  }
+}
