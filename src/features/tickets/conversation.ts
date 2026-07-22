@@ -53,14 +53,18 @@ function progressBar(index: number): string {
   return `${done}${left}`;
 }
 
-/** Builds the embed for a single question — clean, numbered by progress only. */
-function buildQuestionEmbed(index: number): EmbedBuilder {
+/**
+ * Formats a single question using **native Discord markdown** (no embed):
+ * a `##` heading, a `>` block-quote for the prompt, and a `-#` subtext line
+ * carrying the progress bar.
+ */
+function formatQuestion(index: number): string {
   const q = TICKET_QUESTIONS[index];
-  return new EmbedBuilder()
-    .setColor(0x5865f2)
-    .setAuthor({ name: `${q.emoji}  ${q.heading}` })
-    .setDescription(q.prompt)
-    .setFooter({ text: `${progressBar(index)}   •   réponds ci-dessous` });
+  return (
+    `## ${q.emoji}  ${q.heading}\n` +
+    `> ${q.prompt}\n` +
+    `-# ${progressBar(index)}  ·  réponds juste en dessous 👇`
+  );
 }
 
 /** Posts the first question and opens the session for a ticket channel. */
@@ -70,7 +74,7 @@ export async function startTicketConversation(
   guildId: string,
 ): Promise<void> {
   if (!channel.isSendable()) return;
-  await channel.send({ embeds: [buildQuestionEmbed(0)] });
+  await channel.send(formatQuestion(0));
   await setTicketSession(guildId, channel.id, { ownerId, step: 0 });
 }
 
@@ -93,7 +97,7 @@ export async function handleTicketConversation(message: Message): Promise<void> 
 
   // More questions to go → ask the next one.
   if (answered < TICKET_QUESTIONS.length) {
-    await channel.send({ embeds: [buildQuestionEmbed(answered)] });
+    await channel.send(formatQuestion(answered));
     await setTicketSession(message.guildId, message.channelId, {
       ownerId: session.ownerId,
       step: answered,
