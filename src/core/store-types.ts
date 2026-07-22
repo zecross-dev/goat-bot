@@ -6,7 +6,8 @@
  */
 
 export interface TicketConfig {
-  categoryId?: string;
+  /** Destination category per ticket type (ticket type name → category id). */
+  categoryIds?: Record<string, string>;
   staffRoleId?: string;
   logChannelId?: string;
 }

@@ -190,7 +190,7 @@ async function openTicketChannel(
   return guild.channels.create({
     name: `${type}-${slug}`,
     type: ChannelType.GuildText,
-    parent: cfg.categoryId,
+    parent: cfg.categoryIds?.[type],
     topic,
     permissionOverwrites: [
       { id: guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },

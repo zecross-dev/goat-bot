@@ -8,6 +8,7 @@ import {
   type ButtonInteraction,
 } from "discord.js";
 import { getGuildConfig, removePanel } from "../../core/store.js";
+import { TICKET_TYPES } from "../tickets/panel.js";
 
 /**
  * Shared UI for `/goat-config display`: renders the current config + one
@@ -64,7 +65,10 @@ export async function buildConfigDisplay(guildId: string) {
         name: "🎫 Tickets",
         value: [
           `Rôle staff : ${t?.staffRoleId ? `<@&${t.staffRoleId}>` : "*non défini*"}`,
-          `Catégorie : ${t?.categoryId ? `<#${t.categoryId}>` : "*non définie*"}`,
+          ...Object.entries(TICKET_TYPES).map(([type, tc]) => {
+            const id = t?.categoryIds?.[type];
+            return `Catégorie ${tc.label} : ${id ? `<#${id}>` : "*non définie*"}`;
+          }),
           `Salon logs : ${t?.logChannelId ? `<#${t.logChannelId}>` : "*non défini*"}`,
         ].join("\n"),
       },

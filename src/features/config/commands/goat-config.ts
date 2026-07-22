@@ -6,6 +6,7 @@ import {
 } from "discord.js";
 import type { Command } from "../../../core/command.js";
 import { WELCOME_PLACEHOLDERS } from "../../welcome/welcome.js";
+import { TICKET_TYPES } from "../../tickets/panel.js";
 import { updateGuildConfig } from "../../../core/store.js";
 import { buildConfigDisplay } from "../config-ui.js";
 import { configureTickets } from "../handlers/tickets.js";
@@ -19,19 +20,23 @@ const command: Command = {
     .setDescription("Configure les intégrations du bot (tickets, arrivées).")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .setDMPermission(false)
-    .addSubcommand((sub) =>
+    .addSubcommand((sub) => {
       sub
         .setName("tickets")
         .setDescription("Configure le système de tickets et publie son panneau.")
         .addRoleOption((o) =>
           o.setName("staff_role").setDescription("Rôle qui voit et gère les tickets."),
-        )
-        .addChannelOption((o) =>
+        );
+      // One destination-category option per ticket type (e.g. support_category).
+      for (const [type, cfg] of Object.entries(TICKET_TYPES)) {
+        sub.addChannelOption((o) =>
           o
-            .setName("category")
-            .setDescription("Catégorie où créer les tickets.")
+            .setName(`${type}_category`)
+            .setDescription(`Catégorie où créer les tickets « ${cfg.label} ».`)
             .addChannelTypes(ChannelType.GuildCategory),
-        )
+        );
+      }
+      return sub
         .addChannelOption((o) =>
           o
             .setName("logs_channel")
@@ -49,8 +54,8 @@ const command: Command = {
         )
         .addStringOption((o) =>
           o.setName("description").setDescription("Description personnalisée du panneau."),
-        ),
-    )
+        );
+    })
     .addSubcommand((sub) =>
       sub
         .setName("welcome")
