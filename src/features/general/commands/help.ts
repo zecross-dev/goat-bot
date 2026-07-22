@@ -136,7 +136,7 @@ const CONFIG = new EmbedBuilder()
     {
       name: "🎫 `/goat-config`",
       value: [
-        "`tickets` — staff_role, category, logs_channel, panel_channel, title, description.",
+        "`tickets` — staff_role, support_category, commande_category, logs_channel, panel_channel, title, description.",
         "`welcome` — channel (requis), message.",
         "`moderation` — logs_channel (requis).",
         "`levels` — enabled, xp_per_message, cooldown, announce, announce_channel, stack_rewards.",
