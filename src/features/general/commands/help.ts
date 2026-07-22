@@ -1,17 +1,26 @@
-import { EmbedBuilder, MessageFlags, SlashCommandBuilder } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  EmbedBuilder,
+  MessageFlags,
+  SlashCommandBuilder,
+  type ButtonInteraction,
+} from "discord.js";
 import type { Command } from "../../../core/command.js";
 
 /**
  * `/help` — self-documenting command list. Defaults to the general category;
- * `/help category:Modération` (etc.) shows a detailed, per-theme reference.
- * The catalog below is curated by hand so usage strings stay readable.
+ * the buttons below the embed (or `/help category:…`) switch to a detailed,
+ * per-theme reference. The catalog below is curated by hand so usage strings
+ * stay readable.
  */
 
 const GENERAL = new EmbedBuilder()
   .setColor(0x5865f2)
   .setTitle("📖 Aide — Commandes générales")
   .setDescription(
-    "Voici les commandes classiques. Utilise l'option `category` pour voir les autres sections.",
+    "Voici les commandes classiques. Utilise les boutons ci-dessous pour voir les autres sections.",
   )
   .addFields(
     { name: "`/ping`", value: "Affiche la latence du bot.", inline: false },
@@ -29,10 +38,7 @@ const GENERAL = new EmbedBuilder()
     },
     {
       name: "Autres sections",
-      value:
-        "• `/help category:Modération` — sanctions, rôles, salons\n" +
-        "• `/help category:Niveaux` — XP, récompenses, configuration\n" +
-        "• `/help category:Configuration` — tickets, arrivées, logs, permissions",
+      value: "Clique sur un bouton ci-dessous pour parcourir les sections.",
       inline: false,
     },
   )
@@ -161,7 +167,7 @@ const CONFIG = new EmbedBuilder()
       name: "🏆 `/goat-levels`",
       value:
         "Récompenses & XP : `add-reward`, `remove-reward`, `rewards`, `set`, " +
-        "`give`, `reset`. Détails : `/help category:Niveaux`.",
+        "`give`, `reset`. Détails : bouton « Niveaux » ci-dessous.",
       inline: false,
     },
     {
@@ -179,6 +185,50 @@ const CATALOG: Record<string, EmbedBuilder> = {
   levels: LEVELS,
   config: CONFIG,
 };
+
+/** Navigation buttons shown under the help embed, in display order. */
+const CATEGORIES: { key: string; label: string; emoji: string }[] = [
+  { key: "general", label: "Général", emoji: "📖" },
+  { key: "moderation", label: "Modération", emoji: "🔨" },
+  { key: "levels", label: "Niveaux", emoji: "🏆" },
+  { key: "config", label: "Configuration", emoji: "⚙️" },
+];
+
+const HELP_BUTTON_PREFIX = "help:";
+
+export function isHelpButton(customId: string): boolean {
+  return customId.startsWith(HELP_BUTTON_PREFIX);
+}
+
+/** One row of category buttons; the active category's button is disabled. */
+function buildButtons(active: string): ActionRowBuilder<ButtonBuilder> {
+  const row = new ActionRowBuilder<ButtonBuilder>();
+  for (const { key, label, emoji } of CATEGORIES) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`${HELP_BUTTON_PREFIX}${key}`)
+        .setLabel(label)
+        .setEmoji(emoji)
+        .setStyle(key === active ? ButtonStyle.Secondary : ButtonStyle.Primary)
+        .setDisabled(key === active),
+    );
+  }
+  return row;
+}
+
+function renderHelp(category: string): {
+  embeds: EmbedBuilder[];
+  components: ActionRowBuilder<ButtonBuilder>[];
+} {
+  const key = CATALOG[category] ? category : "general";
+  return { embeds: [CATALOG[key]], components: [buildButtons(key)] };
+}
+
+/** Routes a `help:` button press — swaps the embed/buttons in place. */
+export async function handleHelpButton(interaction: ButtonInteraction): Promise<void> {
+  const category = interaction.customId.slice(HELP_BUTTON_PREFIX.length);
+  await interaction.update(renderHelp(category));
+}
 
 const command: Command = {
   data: new SlashCommandBuilder()
@@ -198,8 +248,10 @@ const command: Command = {
 
   async execute(interaction) {
     const category = interaction.options.getString("category") ?? "general";
-    const embed = CATALOG[category] ?? GENERAL;
-    await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    await interaction.reply({
+      ...renderHelp(category),
+      flags: MessageFlags.Ephemeral,
+    });
   },
 };
 

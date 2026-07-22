@@ -11,6 +11,7 @@ import {
 } from "./features/embed/editor.js";
 import { handleMemberJoin } from "./features/welcome/welcome.js";
 import { handleConfigButton, isConfigButton } from "./features/config/config-ui.js";
+import { handleHelpButton, isHelpButton } from "./features/general/commands/help.js";
 import { sweepExpiredTempActions } from "./features/moderation/sweeper.js";
 import { hasCommandAccess } from "./features/permissions/permissions.js";
 import { handleMessage as handleLevelingMessage } from "./features/leveling/leveling.js";
@@ -87,13 +88,19 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  // Button presses: ticket system, then config-UI (panel deletion).
+  // Button presses: help nav, then ticket system, then config-UI (panel deletion).
   if (interaction.isButton()) {
-    if (!isTicketButton(interaction.customId) && !isConfigButton(interaction.customId)) {
+    if (
+      !isHelpButton(interaction.customId) &&
+      !isTicketButton(interaction.customId) &&
+      !isConfigButton(interaction.customId)
+    ) {
       return;
     }
     try {
-      if (isTicketButton(interaction.customId)) {
+      if (isHelpButton(interaction.customId)) {
+        await handleHelpButton(interaction);
+      } else if (isTicketButton(interaction.customId)) {
         await handleTicketButton(interaction);
       } else {
         await handleConfigButton(interaction);
