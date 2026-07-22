@@ -1,4 +1,12 @@
-import { Client, Events, GatewayIntentBits, MessageFlags } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  MessageFlags,
+  type ButtonInteraction,
+  type ChatInputCommandInteraction,
+  type RepliableInteraction,
+} from "discord.js";
 import { config } from "./config.js";
 import { loadCommands } from "./core/command-loader.js";
 import { isTicketButton, refreshPanels } from "./features/tickets/panel.js";
@@ -88,34 +96,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     return;
   }
 
-  // Button presses: help nav, then ticket system, then config-UI (panel deletion).
-  if (interaction.isButton()) {
-    if (
-      !isHelpButton(interaction.customId) &&
-      !isTicketButton(interaction.customId) &&
-      !isConfigButton(interaction.customId)
-    ) {
-      return;
-    }
-    try {
-      if (isHelpButton(interaction.customId)) {
-        await handleHelpButton(interaction);
-      } else if (isTicketButton(interaction.customId)) {
-        await handleTicketButton(interaction);
-      } else {
-        await handleConfigButton(interaction);
-      }
-    } catch (error) {
-      console.error("Error handling button:", error);
-      const content = "Une erreur est survenue.";
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
-      } else {
-        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
-      }
-    }
-    return;
-  }
+  if (interaction.isButton()) return routeButton(interaction);
 
   // Modal submissions: the ticket project-intake form.
   if (interaction.isModalSubmit()) {
@@ -124,18 +105,50 @@ client.on(Events.InteractionCreate, async (interaction) => {
       await handleTicketModal(interaction);
     } catch (error) {
       console.error("Error handling modal:", error);
-      const content = "Une erreur est survenue.";
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
-      } else {
-        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
-      }
+      await replyError(interaction);
     }
     return;
   }
 
-  if (!interaction.isChatInputCommand()) return;
+  if (interaction.isChatInputCommand()) return routeCommand(interaction);
+});
 
+/** Reports an error ephemerally, honoring whether we've already responded. */
+async function replyError(
+  interaction: RepliableInteraction,
+  content = "Une erreur est survenue.",
+): Promise<void> {
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+  } else {
+    await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+  }
+}
+
+/** Dispatches a button press to the owning feature (help, tickets, config-UI). */
+async function routeButton(interaction: ButtonInteraction): Promise<void> {
+  const { customId } = interaction;
+  const handler = isHelpButton(customId)
+    ? handleHelpButton
+    : isTicketButton(customId)
+      ? handleTicketButton
+      : isConfigButton(customId)
+        ? handleConfigButton
+        : null;
+  if (!handler) return;
+
+  try {
+    await handler(interaction);
+  } catch (error) {
+    console.error("Error handling button:", error);
+    await replyError(interaction);
+  }
+}
+
+/** Runs a slash command behind the internal granular permission gate. */
+async function routeCommand(
+  interaction: ChatInputCommandInteraction,
+): Promise<void> {
   const command = commands.get(interaction.commandName);
   if (!command) {
     console.warn(`No handler for command "${interaction.commandName}".`);
@@ -158,14 +171,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await command.execute(interaction);
   } catch (error) {
     console.error(`Error running "${interaction.commandName}":`, error);
-    const content = "Something went wrong running that command.";
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
-    } else {
-      await interaction.reply({ content, flags: MessageFlags.Ephemeral });
-    }
+    await replyError(interaction, "Something went wrong running that command.");
   }
-});
+}
 
 // Graceful shutdown: flip every panel to "maintenance" (banner + disabled
 // buttons) before disconnecting, so integrations reflect the bot being down.
