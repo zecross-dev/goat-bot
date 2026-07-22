@@ -73,6 +73,14 @@ export function isTicketChannel(topic: string | null | undefined): boolean {
   return !!topic && topic.includes("creator:") && topic.includes("type:");
 }
 
+/**
+ * Extracts the ticket owner's user id from a channel topic (the counterpart of
+ * `ownerTag`). Kept here so the topic format lives in a single place.
+ */
+export function parseOwnerId(topic: string | null | undefined): string | undefined {
+  return topic?.match(/creator:(\d+)/)?.[1];
+}
+
 /** Encodes a ticket type into a create-button customId. */
 function buildCreateId(type: TicketType): string {
   return `${CREATE_PREFIX}:${type}`;

@@ -26,6 +26,7 @@ import {
   TICKET_TYPES,
   ownerTag,
   parseCreateType,
+  parseOwnerId,
   requiresIntake,
   typeTag,
   type TicketType,
@@ -292,7 +293,7 @@ async function closeTicket(interaction: ButtonInteraction): Promise<void> {
   const guild = interaction.guild;
   if (!guild || !channel || channel.type !== ChannelType.GuildText) return;
 
-  const ownerId = channel.topic?.match(/creator:(\d+)/)?.[1];
+  const ownerId = parseOwnerId(channel.topic);
   const logChannelId = (await getGuildConfig(guild.id)).tickets?.logChannelId;
 
   // Drop any in-progress intake conversation for this channel.
