@@ -1,4 +1,4 @@
-import type { GuildTextBasedChannel, Message } from "discord.js";
+import { EmbedBuilder, type GuildTextBasedChannel, type Message } from "discord.js";
 import {
   clearTicketSession,
   getGuildConfig,
@@ -16,17 +16,51 @@ import {
  * Session progress is persisted in the store so it survives a restart.
  */
 
+/** Each question: a heading (with its own emoji) and the prompt itself. */
 export const TICKET_QUESTIONS = [
-  "Quel est ton **objectif** — que veux-tu créer ? Décris en quelques lignes le but de ton projet.",
-  "Qu'as-tu **déjà essayé** et où en es-tu ? (outils testés, ce qui bloque, avancement)",
-  "Quelles **fonctionnalités précises** aimerais-tu pour ton projet / bot ?",
-  "Pour **quand** espères-tu lancer, et as-tu une échéance ?",
-  "As-tu des **exemples, bots ou serveurs** dont tu t'inspires ?",
+  {
+    emoji: "🎯",
+    heading: "Ton objectif",
+    prompt:
+      "Que veux-tu créer ? Décris en quelques lignes le but de ton projet.",
+  },
+  {
+    emoji: "🛠️",
+    heading: "Ce que tu as déjà essayé",
+    prompt: "Outils testés, ce qui bloque, où tu en es dans l'avancement.",
+  },
+  {
+    emoji: "✨",
+    heading: "Les fonctionnalités",
+    prompt: "Quelles **fonctionnalités précises** aimerais-tu pour ton projet / bot ?",
+  },
+  {
+    emoji: "📅",
+    heading: "L'échéance",
+    prompt: "Pour **quand** espères-tu lancer, et as-tu une deadline ?",
+  },
+  {
+    emoji: "💡",
+    heading: "Tes inspirations",
+    prompt: "As-tu des **exemples, bots ou serveurs** dont tu t'inspires ?",
+  },
 ];
 
-/** Formats a question with its position, e.g. **Question 1/3**. */
-function formatQuestion(index: number): string {
-  return `**Question ${index + 1}/${TICKET_QUESTIONS.length}**\n${TICKET_QUESTIONS[index]}`;
+/** A subtle progress bar, e.g. ●●○○○ for question 3 of 5. */
+function progressBar(index: number): string {
+  const done = "●".repeat(index + 1);
+  const left = "○".repeat(TICKET_QUESTIONS.length - index - 1);
+  return `${done}${left}`;
+}
+
+/** Builds the embed for a single question — clean, numbered by progress only. */
+function buildQuestionEmbed(index: number): EmbedBuilder {
+  const q = TICKET_QUESTIONS[index];
+  return new EmbedBuilder()
+    .setColor(0x5865f2)
+    .setAuthor({ name: `${q.emoji}  ${q.heading}` })
+    .setDescription(q.prompt)
+    .setFooter({ text: `${progressBar(index)}   •   réponds ci-dessous` });
 }
 
 /** Posts the first question and opens the session for a ticket channel. */
@@ -36,7 +70,7 @@ export async function startTicketConversation(
   guildId: string,
 ): Promise<void> {
   if (!channel.isSendable()) return;
-  await channel.send(formatQuestion(0));
+  await channel.send({ embeds: [buildQuestionEmbed(0)] });
   await setTicketSession(guildId, channel.id, { ownerId, step: 0 });
 }
 
@@ -59,7 +93,7 @@ export async function handleTicketConversation(message: Message): Promise<void> 
 
   // More questions to go → ask the next one.
   if (answered < TICKET_QUESTIONS.length) {
-    await channel.send(formatQuestion(answered));
+    await channel.send({ embeds: [buildQuestionEmbed(answered)] });
     await setTicketSession(message.guildId, message.channelId, {
       ownerId: session.ownerId,
       step: answered,
@@ -70,12 +104,21 @@ export async function handleTicketConversation(message: Message): Promise<void> 
   // All answered → close the session, thank the owner, and hand off to staff.
   await clearTicketSession(message.guildId, message.channelId);
   const staffRoleId = (await getGuildConfig(message.guildId)).tickets?.staffRoleId;
-  const staffPing = staffRoleId ? ` <@&${staffRoleId}>` : "";
+  const staffPing = staffRoleId ? `<@&${staffRoleId}>` : "le staff";
 
+  const done = new EmbedBuilder()
+    .setColor(0x57f287)
+    .setAuthor({ name: "✅  Merci, tout est noté !" })
+    .setDescription(
+      `Tes réponses sont bien enregistrées 🙌\n` +
+        `Un membre du staff (${staffPing}) va prendre le relais très vite.`,
+    )
+    .setFooter({ text: "Tu peux fermer le ticket à tout moment." });
+
+  // The ping lives in `content` — mentions inside an embed never notify.
   await channel.send({
-    content:
-      `Merci pour tes réponses <@${session.ownerId}> ! 🙌\n` +
-      `Toutes les infos sont réunies — un membre du staff${staffPing} va prendre le relais.`,
+    content: `<@${session.ownerId}>${staffRoleId ? ` <@&${staffRoleId}>` : ""}`,
+    embeds: [done],
     allowedMentions: {
       users: [session.ownerId],
       roles: staffRoleId ? [staffRoleId] : [],

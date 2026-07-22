@@ -31,7 +31,7 @@ import {
   type TicketType,
 } from "./panel.js";
 import { buildIntakeModal, buildIntakeRecap, parseIntakeType } from "./intake.js";
-import { startTicketConversation } from "./conversation.js";
+import { startTicketConversation, TICKET_QUESTIONS } from "./conversation.js";
 import { buildTranscript } from "./transcript.js";
 
 /**
@@ -109,7 +109,7 @@ export async function handleTicketModal(
     .setTitle(typeConfig.title)
     .setDescription(
       `Bonjour ${user.toString()}, merci pour ces premières infos ! 🙌\n\n` +
-        "Pour bien cerner ton projet, je vais te poser **3 petites questions** — " +
+        `Pour bien cerner ton projet, je vais te poser **${TICKET_QUESTIONS.length} petites questions** — ` +
         "réponds simplement ici, **une par une** : je passe à la suivante après " +
         "chaque réponse.\n\n" +
         "Le staff prendra le relais une fois tes réponses complètes. Tu peux " +
