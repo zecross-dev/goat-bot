@@ -10,9 +10,11 @@ import { TICKET_TYPES, isTicketType, type TicketType } from "./panel.js";
 
 /**
  * Project-intake questionnaire shown when a client opens a "Passer commande"
- * ticket. A single Discord modal (max 5 fields, no privileged intent) collects
- * the key structured info; the ticket channel then posts a clean recap and
- * starts a guided, one-question-at-a-time conversation (see `conversation.ts`).
+ * ticket. The Discord modal keeps only the **quick, one-line info** (no
+ * privileged intent); the two longer, open-ended questions (objective and
+ * progress) are asked afterwards in the guided, one-question-at-a-time
+ * conversation (see `conversation.ts`). The ticket channel first posts a clean
+ * recap of the modal answers, then starts that conversation.
  */
 
 export const INTAKE_PREFIX = "ticket:intake";
@@ -20,10 +22,8 @@ export const INTAKE_PREFIX = "ticket:intake";
 /** TextInput customIds — also used to read the answers back on submit. */
 const FIELD = {
   nom: "projet_nom",
-  objectif: "projet_objectif",
   budget: "projet_budget",
   equipe: "projet_equipe",
-  essaye: "projet_essaye",
 } as const;
 
 /** Whether a modal submission is a ticket-intake form. */
@@ -56,15 +56,6 @@ export function buildIntakeModal(type: TicketType): ModalBuilder {
       ),
       row(
         new TextInputBuilder()
-          .setCustomId(FIELD.objectif)
-          .setLabel("Ton objectif — que veux-tu créer ?")
-          .setStyle(TextInputStyle.Paragraph)
-          .setMaxLength(1000)
-          .setPlaceholder("Décris en quelques lignes le but de ton projet.")
-          .setRequired(true),
-      ),
-      row(
-        new TextInputBuilder()
           .setCustomId(FIELD.budget)
           .setLabel("Budget (approximatif)")
           .setStyle(TextInputStyle.Short)
@@ -79,15 +70,6 @@ export function buildIntakeModal(type: TicketType): ModalBuilder {
           .setStyle(TextInputStyle.Short)
           .setMaxLength(200)
           .setPlaceholder("Ex : 3 personnes, ~500 membres")
-          .setRequired(false),
-      ),
-      row(
-        new TextInputBuilder()
-          .setCustomId(FIELD.essaye)
-          .setLabel("Ce que tu as déjà essayé / avancement")
-          .setStyle(TextInputStyle.Paragraph)
-          .setMaxLength(1000)
-          .setPlaceholder("Outils testés, ce qui bloque, où tu en es…")
           .setRequired(false),
       ),
     );
@@ -114,16 +96,11 @@ export function buildIntakeRecap(
     .setTitle("📋 Récapitulatif du projet")
     .addFields(
       { name: "📛 Nom du projet", value: field(interaction, FIELD.nom) },
-      { name: "🎯 Objectif", value: field(interaction, FIELD.objectif) },
       { name: "💰 Budget", value: field(interaction, FIELD.budget), inline: true },
       {
         name: "👥 Équipe & Discord",
         value: field(interaction, FIELD.equipe),
         inline: true,
-      },
-      {
-        name: "🛠️ Déjà essayé / avancement",
-        value: field(interaction, FIELD.essaye),
       },
     )
     .setFooter({ text: "Formulaire rempli à l'ouverture du ticket" })

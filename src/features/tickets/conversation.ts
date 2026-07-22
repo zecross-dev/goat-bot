@@ -17,6 +17,8 @@ import {
  */
 
 export const TICKET_QUESTIONS = [
+  "Quel est ton **objectif** — que veux-tu créer ? Décris en quelques lignes le but de ton projet.",
+  "Qu'as-tu **déjà essayé** et où en es-tu ? (outils testés, ce qui bloque, avancement)",
   "Quelles **fonctionnalités précises** aimerais-tu pour ton projet / bot ?",
   "Pour **quand** espères-tu lancer, et as-tu une échéance ?",
   "As-tu des **exemples, bots ou serveurs** dont tu t'inspires ?",
